@@ -64,8 +64,6 @@ def train_model(model, optimizer,  num_epochs=200):
         print('{:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
         print('Epoch loss :' + str(epoch_loss))
 
-    print('Best val loss: {:4f}'.format(best_loss))
-
 
 if __name__ == "__main__": 
 
