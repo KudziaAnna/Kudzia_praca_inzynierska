@@ -1,15 +1,14 @@
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, datasets, models
-from Prepering_data import get_dataset
+from prepering_data import get_dataset
 
 class DHDataset(Dataset):
     """Brain dMRI dataset for harmonization"""
 
-    def __init__(self, b_x, b_y, transform = None):
+    def __init__(self, b_x, b_y):
         'Initialization'
         self.input_images, self.target_masks = get_dataset(b_x, b_y)
-        self.transform = transform
+
 
 
     def __len__(self):
@@ -25,14 +24,7 @@ class DHDataset(Dataset):
 
 
 def load_data(b_x, b_y, batch_size):
-    # use the same transformations for train/val in this example
-    trans = transforms.Compose([
-        #transforms.Resize(128),
-        #transforms.Grayscale(num_output_channels=1),
-        transforms.ToTensor()  
-    ])
-
-    data = DHDataset(b_x, b_y, transform= trans)
+    data = DHDataset(b_x, b_y)
 
     indices = np.random.permutation(len(data))
 
