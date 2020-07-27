@@ -1,7 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import scipy.io as sio
 import torch
-from numpy import save
+
 
 # DIPY library
 from dipy.io import read_bvals_bvecs
@@ -49,7 +50,24 @@ def get_dataset(x,y):
     #Slicing 3D data into 2D one
     X, Y  = slice_3D_data(X_3D, Y_3D)
 
-    X = torch.from_numpy(X.astype(np.float32))
-    Y = torch.from_numpy(Y.astype(np.float32))
+    X = torch.from_numpy(X.astype(np.float32))/255
+    Y = torch.from_numpy(Y.astype(np.float32))/255
 
     return X, Y 
+
+
+X,Y = get_dataset(1,3)
+error = np.abs( X[100]-Y[100])
+
+plt.subplot(1,3,1)
+plt.imshow(X[100].reshape([96,96]), cmap = 'gray')
+plt.axis('off')
+plt.title("B-value = 1000")
+plt.subplot(1,3,2)
+plt.imshow(Y[100].reshape([96,96]), cmap = 'gray')
+plt.axis('off')
+plt.title("B-value = 3000")
+plt.subplot(1,3,3)
+plt.imshow(error.reshape([96,96]), cmap = 'gray')
+plt.axis('off')
+plt.title("Diffrence")
