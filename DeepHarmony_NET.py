@@ -34,17 +34,12 @@ class DeepHarmonyNet(nn.Module):
     def forward(self, x):
         enc1 = self.encoder1(x)
         enc2 = self.encoder2( self.down1(enc1) )
-        print(enc2.data.shape)
         enc3 = self.encoder3( self.down2(enc2))
-        print(enc3.data.shape)
         enc4 = self.encoder4(  self.down3(enc3))
-        print(enc4.data.shape)
 
         bottleneck = self.bottleneck(self.down4(enc4))
-        print(bottleneck.data.shape)
 
         dec4 = self.up4(bottleneck)
-        print(dec4.data.shape)
         dec4 = torch.cat((dec4,enc4), dim=1)
         dec4 = self.decoder4(dec4)
         dec3 = self.up3(dec4)
