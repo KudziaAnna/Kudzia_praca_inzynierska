@@ -3,5 +3,5 @@
 ## DeepHarmony
 Implementation of DeepHarmony Net for dMRI image harmonization in PyTorch
 
-## RISH features calculations
+## RISH_features
 Calculations of RISH features for HCP WuMInn data by using DIPY library
