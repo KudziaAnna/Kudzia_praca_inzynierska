@@ -3,5 +3,11 @@
 ## DeepHarmony
 Implementation of DeepHarmony Net for dMRI image harmonization in PyTorch
 
-## RISH_features
-Calculations of RISH features for HCP WuMInn data by using DIPY library
+## SHNet
+Implementation of Sherical Harmonic Network for dMRI image harmonization in PyTorch
+
+## Helper classes
+### RISH features class
+Calculates the RISH features of any order a by using DIPY library
+### SH ceofficient class
+Calculates the SH coefficient of any order a by using DIPY library, according to Descoutex
