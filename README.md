@@ -9,5 +9,5 @@ Implementation of Sherical Harmonic Network for dMRI image harmonization in PyTo
 ## Helper classes
 ### RISH features class
 Calculates the RISH features of any order a by using DIPY library
-### SH ceofficient class
+### SH coefficient class
 Calculates the SH coefficient of any order a by using DIPY library, according to Descoutex
