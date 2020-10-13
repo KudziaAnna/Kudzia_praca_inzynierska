@@ -7,7 +7,7 @@ Created on Wed Sep 30 09:48:31 2020
 
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from RISH_features import SHBasis
+from SHBasis import SHBasis
 
 class SHNetDataset(Dataset):
     """Brain dMRI dataset for harmonization"""
