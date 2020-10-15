@@ -52,8 +52,7 @@ def load_data(b_x, b_y, filename_data, filename_bvals, filename_bvecs):
 
     train_set = data[indices[:int(len(data)*0.8)]]
     val_set = data[indices[int(len(data)*0.8):]]
-
     datasets = {
-        'train': train_set, 'val': val_set
+        'train': train_set, 'valid': val_set, 'test': data
     }
     return datasets
