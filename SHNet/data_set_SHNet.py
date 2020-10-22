@@ -64,21 +64,16 @@ class SHNetDataset(Dataset):
 
 
 def load_data(b_x, b_y):
+    data = SHResNetDataset(b_x, b_y)
 
-    subject_size = 2204160
-    data = SHNetDataset(b_x, b_y)
-
-    test_set = data[(len(data)-subject_size):]
-    
     indices = np.random.permutation(len(data))
 
-    # train_set = data[indices[:int((len(data)-subject_size)*0.8)]]
-    # val_set = data[indices[int((len(data)-subject_size)*0.8):(len(data)-subject_size)]]
-    
-    train_set = data[indices[:int(len(data)*0.8)]]
-    val_set = data[indices[int(len(data)*0.8):]]
-    
+    train_set = data[indices[:int(len(data) * 0.8)]]
+    val_set = data[indices[int(len(data) * 0.8):]]
+
     datasets = {
-        'train': train_set, 'valid': val_set, 'test': test_set
+        'train': train_set, 'valid': val_set
     }
     return datasets
+
+   
