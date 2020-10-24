@@ -8,7 +8,7 @@ class SHResNet(nn.Module):
     def __init__(self, input_size, num_resBlock):
         super(SHResNet, self).__init__()
         self.cnn1 = nn.Conv3d(input_size, input_size, 3, padding=1)
-        self.output = nn.Conv3d(input_size, 15, 3, padding=0)
+        self.output = nn.Conv3d(input_size, input_size, 3, padding=0)
         self.fu_0 = nn.Conv3d(1, 1, 3, padding=1)
         self.fu_2 = nn.Conv3d(5, 5, 3, padding=1)
         self.fu_4 = nn.Conv3d(9, 9, 3, padding=1)
@@ -29,7 +29,7 @@ class SHResNet(nn.Module):
         out = self.cnn1(out)
         out = self.relu(out)
 
-        out = self.output(out)
+        out = self.cnn1(out)
         out = self.relu(out)
 
         return out
@@ -89,15 +89,16 @@ def train_model(model, criterion, optimizer_SGD, optimizer_Adam, num_epochs, dev
             loss.backward()
             optimizer.step()
 
-            if (i + 1) % 1 == 0:
-                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step,
-                                                                         loss.item()))
+            if (i + 1) % 10 == 0:
+                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
+        
+        if (epoch+1)%5 ==0:                                                                         
             torch.save({
                 'epoch': epoch,
                 'mode_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': loss,
-            }, "model_SHResNet.pt"
+            }, "/home/kudzia/SHResNet/models/SHResNet_1_2_"+str(epoch+1)+".pt"
             )
 
     # Validate the model
@@ -114,13 +115,13 @@ def train_model(model, criterion, optimizer_SGD, optimizer_Adam, num_epochs, dev
             mse += torch.mean((predicted - SH_label) ** 2)
             total += 1
 
-        print('MSE of the network on the validation SH coefficient: {} %'.format(mse / total))
+        print('MSE of the network on the validation SH coefficient: {}'.format(mse / total))
 
 
 if __name__ == '__main__':
     # Device configuration
-    device = torch.device( 'cpu')
-    # 'cuda' if torch.cuda.is_available() else
+    device = torch.device( 'cuda' if torch.cuda.is_available() else 'cpu')
+    # 
     # Hyper-parameters
     num_resBlock = 2
     input_size = 15
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     b_y = 3000
 
     # data_dir = '/home/tomasz/data/brain_diffusion/hcp_wuminn/'
-    data_dir = ''
+    data_dir = '/home/kudzia/data/'
     subject = '122317'
     filename_data = data_dir + subject + '/T1w/Diffusion/data.nii'
     filename_bvals = data_dir + subject + '/T1w/Diffusion/bvals'
