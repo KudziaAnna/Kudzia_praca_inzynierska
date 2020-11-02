@@ -18,7 +18,7 @@ class SHResNet(nn.Module):
 
     def forward(self, x):
         out = self.cnn1(x)
-        tmp = out
+        tmp = np.copy(out)
 
         for i in range(self.num_resBlock):
             out = self.resBlock(out)
