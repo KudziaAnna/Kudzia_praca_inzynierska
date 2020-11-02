@@ -38,7 +38,7 @@ def predict(args, input_size, model_name ='/home/kudzia/SHResNet/models/SHResNet
     if args.net == "SHNet":
         model = SHNet(input_size)
     else:
-        model = SHResNet(input_size, args.num_resblock)
+        model = SHResNet(input_size, 2)
     model.double()
     checkpoint = torch.load(model_name)
     model.load_state_dict(checkpoint['mode_state_dict'])
@@ -775,7 +775,7 @@ def main():
     else:
         input_size = 28
   
-    if args.pe:
+    if args.per_epoch:
       epoch_measures(args, input_size=input_size)
     else:
       prediction = predict(args, input_size, normalized=True)
