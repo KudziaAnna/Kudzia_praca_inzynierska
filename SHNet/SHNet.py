@@ -8,7 +8,10 @@ Created on Wed Sep 30 12:06:01 2020
 import time
 import torch
 import torch.nn as nn
-from data_set_SHNet import load_data
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from data_set_SHNet_cross import get_data
 
 # Fully connected neural network 
 class SHNet(nn.Module):
@@ -25,7 +28,15 @@ class SHNet(nn.Module):
         out = self.bn0(x)
         out = self.fc0(out)
         out = self.relu(out)
-        
+
+        out = self.bn(out)
+        out = self.fc(out)
+        out = self.relu(out)
+
+        out = self.bn(out)
+        out = self.fc(out)
+        out = self.relu(out)
+
         out = self.bn(out)
         out = self.fc(out)
         out = self.relu(out)
@@ -39,81 +50,127 @@ class SHNet(nn.Module):
         return out
 
 
-def train_model(model, criterion, optimizer_SGD, optimizer_Adam, num_epochs, device):
-    # Train the model
-    model.train()
-    total_step = len(train_loader)
-    for epoch in range(num_epochs):
-        for batch_idx, (SH_input, SH_label) in enumerate(train_loader):
-            # Move tensors to the configured device
-            SH_input = SH_input.to(device)
-            SH_label = SH_label.to(device)
+def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, num_epochs, device, batch_size):
 
-            # Forward pass
-            outputs = model(SH_input)
-            loss = criterion(outputs, SH_label)
+    kfold = KFold(n_splits = splits, shuffle = True, random_state = 42)
+    loss_data = []
+    loss_test = []
+    mse_test = []
+    
+    for fold, (train_index, test_index) in enumerate(kfold.split(X, y)):
+        print("Fold: "+str(fold+1))
 
-            # Backward and optimize
-            if epoch > 5:
-                optimizer = optimizer_SGD
-            else:
-                optimizer = optimizer_Adam
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        X_train_fold = torch.tensor(X[train_index])
+        y_train_fold = torch.tensor(y[train_index])
+        X_test_fold = torch.tensor(X[test_index])
+        y_test_fold = torch.tensor(y[test_index])
 
-            if (batch_idx + 1) % 1 == 0:
-                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, num_epochs, batch_idx + 1, total_step,loss.item()))
-             
-        if (epoch + 1) % 20 == 0:                                                            
-              torch.save({
-                  'epoch': epoch,
-                  'mode_state_dict': model.state_dict(),
-                  'optimizer_state_dict': optimizer.state_dict(),
-                  'loss' : loss,
-                  }, "/home/kudzia/SHNet/models/SHNet_1_2_"+str(epoch+1)+".pt"
-              )
+        train = torch.utils.data.TensorDataset(X_train_fold, y_train_fold)
+        test = torch.utils.data.TensorDataset(X_test_fold, y_test_fold)
 
-    # Validate the model
-    model.eval()
-    # In test phase, we don't need to compute gradients (for memory efficiency)
-    with torch.no_grad():
-        correct = 0
-        total = 0
-        mse = 0
-        for SH_input, SH_label in test_loader:
-            SH_input = SH_input.to(device)
-            SH_label = SH_label.to(device)
-            output = (model(SH_input))
-            predicted = output.data
-            mse += torch.mean((predicted - SH_label) ** 2)
-            total += 1
+        # Data loader
+        train_loader = torch.utils.data.DataLoader(dataset=train,
+                                                   batch_size=batch_size,
+                                                   shuffle=True)
 
-        print('MSE of the network on the validation SH coefficient: {} %'.format(mse / total))
-        return model
+        test_loader = torch.utils.data.DataLoader(dataset=test,
+                                                  batch_size=batch_size,
+                                                  shuffle=False)
+
+        
+        for epoch in range(num_epochs):
+            # Train the model
+            model.train()
+            total_train_step = len(train_loader)
+            running_loss = 0
+            for batch_idx, (SH_input, SH_label) in enumerate(train_loader):
+                # Move tensors to the configured device
+                SH_input = SH_input.to(device)
+                SH_label = SH_label.to(device)
+
+                # Forward pass
+                outputs = model(SH_input)
+                loss = criterion(outputs, SH_label)
+
+                # Backward and optimize
+                if epoch > 4:
+                    optimizer = optimizer_SGD
+                else:
+                    optimizer = optimizer_Adam
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.item()
+                if (batch_idx + 1) % 10000 == 0:
+                    print('Epoch [{}/{}], Step [{}/{}], Train Loss: {:.4f}'.format(epoch + 1, num_epochs, batch_idx + 1,
+                                                                                   total_train_step, running_loss))
+
+            loss_data.append((running_loss / total_train_step))
+
+            if (epoch + 1) % 5 == 0:
+                torch.save({
+                    'epoch': epoch,
+                    'mode_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'loss': loss,
+                }, "/home/kudzia/SHNet/models/SHNet_cross_1_2_" + str((epoch + 1)+fold*num_epochs) + ".pt"
+                )
+                
+            # Validate the model
+            model.eval()
+            total_test_step = len(test_loader)
+            test_loss = 0
+            mse = 0
+            # In test phase, we don't need to compute gradients (for memory efficiency)
+            with torch.no_grad():
+                total = 0
+                for batch_idx, (SH_input, SH_label) in enumerate(test_loader):
+                    SH_input = SH_input.to(device)
+                    SH_label = SH_label.to(device)
+                    output = (model(SH_input))
+                    predicted = output.data
+                    test_loss += loss.item()
+                    mse += torch.mean((predicted - SH_label) ** 2)
+                    total += 1
+
+                    if (batch_idx + 1) % 1000 == 0:
+                        print('Epoch [{}/{}], Step [{}/{}], Test Loss: {:.8f}, MSE: {:.8f}'.format(epoch + 1, num_epochs,
+                                                                                      batch_idx + 1, total_test_step,
+                                                                                      test_loss, mse))
+                mse_test.append((mse / total_test_step))
+                loss_test.append((test_loss / total_test_step))
+
+                
+    epoch_list = np.arange(1, splits*num_epochs+1)  
+    plt.figure(0)
+    plt.semilogy(epoch_list, loss_data, label="Train loss") 
+    plt.semilogy(epoch_list, loss_test, label="Test loss")                                                               
+    plt.xlabel("Epoch")                                                                                                                              
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig('/home/kudzia/results/loss_cross_for_epoch_SHNet.svg')
+       
+    plt.figure(1)                                                                                                         
+    plt.semilogy(epoch_list, mse_test) 
+    plt.xlabel("Epoch")                                                                                                                              
+    plt.ylabel("MSE")
+    plt.savefig('/home/kudzia/results/mseloss_cross_for_epoch_SHNet.svg')  
 
 
 if __name__ == '__main__':
     # Device configuration
-    device = torch.device('cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     # Hyper-parameters
     input_size = 15
-    num_epochs = 100
+    num_epochs = 5
     batch_size = 128
+    n_splits = 5
 
     b_x = 1000
     b_y = 2000
 
-    datasets = load_data(b_x, b_y)
-
-    # Data loader
-    train_loader = torch.utils.data.DataLoader(dataset=datasets["train"],
-                                               batch_size=batch_size,
-                                               shuffle=True)
-
-    test_loader = torch.utils.data.DataLoader(dataset=datasets["valid"],
-                                              batch_size=batch_size,
-                                              shuffle=False)
+    X, y = get_data(b_x, b_y)
 
     model = SHNet(input_size).to(device)
     model.double()
@@ -124,5 +181,6 @@ if __name__ == '__main__':
     optimizer_SGD = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     
     start = time.time()
-    trained_model = train_model(model, criterion, optimizer_SGD, optimizer_Adam, num_epochs, device)
+    train_model(model, X, y, n_splits, criterion, optimizer_SGD, optimizer_Adam, num_epochs, device, batch_size)
     print("Training time: "+str(time.time()-start))
+
