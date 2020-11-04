@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
+from SHBasis import SHBasis
 from sklearn.model_selection import KFold
 from data_set_SHResNet_cross import get_data
 
@@ -18,8 +19,8 @@ class SHResNet(nn.Module):
 
     def forward(self, x):
         out = self.cnn1(x)
-        tmp = np.copy(out)
-
+        tmp = out.clone()
+      
         for i in range(self.num_resBlock):
             out = self.resBlock(out)
         out = self.cnn1(out)
@@ -30,7 +31,7 @@ class SHResNet(nn.Module):
         out = self.cnn1(out)
         out = self.relu(out)
 
-        out = self.cnn1(out)
+        out = self.output(out)
         out = self.relu(out)
 
         return out
@@ -119,21 +120,21 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item()
-                if (batch_idx + 1) % 2 == 0:
+                if (batch_idx + 1) % 100 == 0:
                     print('Epoch [{}/{}], Step [{}/{}], Train Loss: {:.4f}'.format(epoch + 1, num_epochs, batch_idx + 1,
                                                                                    total_train_step, running_loss))
 
             loss_data.append(running_loss / total_train_step)
-
+            
             if (epoch +1) % 5 == 0:
                 torch.save({
                     'epoch': epoch,
                     'mode_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss,
-                }, "/home/kudzia/SHResNet/models/SHResNet_cross_1_2_" + str((epoch + 1) + fold * num_epochs) + ".pt"
+                }, "/home/kudzia/SHResNet/models/SHResNet_block_1_2_" + str((epoch + 1) + fold * num_epochs) + ".pt"
                 )
-                
+                make_prediction((epoch + 1) + fold * num_epochs)
             # Validate the model
             model.eval()
             total_test_step = len(test_loader)
@@ -151,12 +152,13 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                     mse += torch.mean((predicted - SH_label) ** 2)
                     total += 1
 
-                    if (batch_idx + 1) % 1 == 0:
+                    if (batch_idx + 1) % 15 == 0:
                         print('Epoch [{}/{}], Step [{}/{}], Test Loss: {:.8f}, MSE: {:.8f}'.format(epoch + 1, num_epochs,
                                                                                       batch_idx + 1, total_test_step,
                                                                                       test_loss, mse))
                 mse_test.append((mse / total_test_step))
                 loss_test.append((test_loss / total_test_step))
+                
 
     epoch_list = np.arange(1, splits * num_epochs + 1)
     plt.figure(0)
@@ -165,13 +167,45 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("/home/kudzia/results/loss_cross_for_epoch_SHResNet.svg")
+    plt.savefig("/home/kudzia/results/loss_for_epoch_1_2_SHResNet.svg")
 
     plt.figure(1)
     plt.semilogy(epoch_list, mse_test)
     plt.xlabel("Epoch")
     plt.ylabel("MSE")
-    plt.savefig("/home/kudzia/results/mseloss_cross_for_epoch_SHResNet.svg")
+    plt.savefig("/home/kudzia/results/mseloss_for_epoch_1_2_SHResNet.svg")
+
+def make_prediction(epoch):
+    data_dir = '/home/kudzia/data/'
+    subject = '122317'
+    filename_data = data_dir + subject + '/T1w/Diffusion/data.nii'
+    filename_bvals = data_dir + subject + '/T1w/Diffusion/bvals'
+    filename_bvecs = data_dir + subject + '/T1w/Diffusion/bvecs'
+    model_name ='/home/kudzia/SHResNet/models/SHResNet_block_1_2_'+ str(epoch)+'.pt'
+
+    true_x = SHBasis(filename_data, filename_bvals, filename_bvecs, 4, 1000, normalized=False)
+
+    data_x = true_x.get_SHCoeff()
+    k = int(data_x.shape[2]/2)
+    for i in range(1, data_x.shape[1]-1):
+      for j in range(1, data_x.shape[2]-1):
+        if i == 1:
+          input = data_x[:,:3, :3, k-1:k+2].reshape((1, data_x.shape[0], 3, 3, 3))
+        else:
+          tmp_i = data_x[:, i-1:i+2, j-1:j+2, k-1:k+2].reshape((1, data_x.shape[0], 3, 3, 3))
+          input = np.append(input, tmp_i, axis=0)
+    
+    model = SHResNet(input_size, 2)
+    model.double().cuda()
+    checkpoint = torch.load(model_name)
+    model.load_state_dict(checkpoint['mode_state_dict'])
+    model.eval()     
+    with torch.no_grad():
+      input = torch.from_numpy(input).cuda()
+      prediction = model(input)
+      
+    print("Prediction: "+str(prediction.shape))
+ 
 
 if __name__ == '__main__':
     # Device configuration
@@ -186,7 +220,6 @@ if __name__ == '__main__':
 
     b_x = 1000
     b_y = 2000
-    # b_y = b_x
 
     X, y = get_data(b_x, b_y)
 
