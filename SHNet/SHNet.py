@@ -36,6 +36,10 @@ class SHNet(nn.Module):
         out = self.bn(out)
         out = self.fc(out)
         out = self.relu(out)
+
+        out = self.bn(out)
+        out = self.fc(out)
+        out = self.relu(out)
         
         out = self.bn(out)
         out = self.fc(out)
@@ -97,7 +101,7 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item()
-                if (batch_idx + 1) % 10000 == 0:
+                if (batch_idx + 1) % 100 == 0:
                     print('Epoch [{}/{}], Step [{}/{}], Train Loss: {:.4f}'.format(epoch + 1, num_epochs, batch_idx + 1,
                                                                                    total_train_step, running_loss))
 
@@ -109,7 +113,7 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                     'mode_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss,
-                }, "/home/kudzia/SHNet/models/SHNet_cross_1_2_" + str((epoch + 1)+fold*num_epochs) + ".pt"
+                }, "/home/kudzia/SHNet/models/SHNet_1_2_" + str((epoch + 1)+fold*num_epochs) + ".pt"
                 )
                 
             # Validate the model
@@ -129,7 +133,7 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                     mse += torch.mean((predicted - SH_label) ** 2)
                     total += 1
 
-                    if (batch_idx + 1) % 1000 == 0:
+                    if (batch_idx + 1) % 100 == 0:
                         print('Epoch [{}/{}], Step [{}/{}], Test Loss: {:.8f}, MSE: {:.8f}'.format(epoch + 1, num_epochs,
                                                                                       batch_idx + 1, total_test_step,
                                                                                       test_loss, mse))
@@ -144,13 +148,13 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
     plt.xlabel("Epoch")                                                                                                                              
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig('/home/kudzia/results/loss_cross_for_epoch_SHNet.svg')
+    plt.savefig('/home/kudzia/results/loss_for_epoch_SHNet.svg')
        
     plt.figure(1)                                                                                                         
     plt.semilogy(epoch_list, mse_test) 
     plt.xlabel("Epoch")                                                                                                                              
     plt.ylabel("MSE")
-    plt.savefig('/home/kudzia/results/mseloss_cross_for_epoch_SHNet.svg')  
+    plt.savefig('/home/kudzia/results/mseloss_for_epoch_SHNet.svg')  
 
 
 if __name__ == '__main__':
@@ -159,7 +163,7 @@ if __name__ == '__main__':
 
     # Hyper-parameters
     input_size = 15
-    num_epochs = 5
+    num_epochs = 10
     batch_size = 128
     n_splits = 5
 
