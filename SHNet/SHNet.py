@@ -36,10 +36,6 @@ class SHNet(nn.Module):
         out = self.bn(out)
         out = self.fc(out)
         out = self.relu(out)
-
-        out = self.bn(out)
-        out = self.fc(out)
-        out = self.relu(out)
         
         out = self.bn(out)
         out = self.fc(out)
