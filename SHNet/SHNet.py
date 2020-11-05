@@ -83,7 +83,8 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                 # Move tensors to the configured device
                 SH_input = SH_input.to(device)
                 SH_label = SH_label.to(device)
-
+                
+                optimizer.zero_grad()
                 # Forward pass
                 outputs = model(SH_input)
                 loss = criterion(outputs, SH_label)
@@ -93,7 +94,6 @@ def train_model(model, X, y, splits, criterion, optimizer_SGD, optimizer_Adam, n
                     optimizer = optimizer_SGD
                 else:
                     optimizer = optimizer_Adam
-                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item()
